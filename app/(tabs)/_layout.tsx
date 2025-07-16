@@ -1,31 +1,63 @@
 import { Tabs } from 'expo-router'
 import React from 'react'
-import { UiIconSymbol } from '@/components/ui/ui-icon-symbol'
+import { TabBarIcon } from '@/components/ui/ui-icon-symbol'
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
-      {/* The index redirects to the account screen */}
+    <Tabs screenOptions={{ 
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#6B7280',
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#E5E7EB',
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: 80,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+     }}>
       <Tabs.Screen name="index" options={{ tabBarItemStyle: { display: 'none' } }} />
+      <Tabs.Screen name="account" options={{ tabBarItemStyle: { display: 'none' } }} />
+      
       <Tabs.Screen
-        name="account"
+        name="home"
         options={{
-          title: 'Account',
-          tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="wallet.pass.fill" color={color} />,
+          title: 'Home',
+          tabBarIcon: ({ color, focused, size }) => (
+            <TabBarIcon name="home" color={color} focused={focused} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="gearshape.fill" color={color} />,
+          tabBarIcon: ({ color, focused, size }) => (
+            <TabBarIcon name="messages" color={color} focused={focused} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="demo"
         options={{
           title: 'Demo',
-          tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="ladybug.fill" color={color} />,
+          tabBarIcon: ({ color, focused, size }) => (
+            <TabBarIcon name="projects" color={color} focused={focused} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, focused, size }) => (
+            <TabBarIcon name="profile" color={color} focused={focused} size={size} />
+          ),
         }}
       />
     </Tabs>

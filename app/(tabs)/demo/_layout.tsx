@@ -4,7 +4,7 @@ import React from 'react'
 
 export default function DemoLayout() {
   return (
-    <Stack screenOptions={{ headerTitle: 'Demo', headerRight: () => <WalletUiDropdown /> }}>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
     </Stack>
   )

@@ -4,6 +4,7 @@ import { Cluster } from '@/components/cluster/cluster'
 import { ClusterNetwork } from '@/components/cluster/cluster-network'
 
 export interface ClusterProviderContext {
+  programId(arg0: any[], programId: any): [any]
   selectedCluster: Cluster
   clusters: Cluster[]
   setSelectedCluster: (cluster: Cluster) => void
@@ -20,6 +21,7 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
       selectedCluster,
       clusters: [...AppConfig.clusters].sort((a, b) => (a.name > b.name ? 1 : -1)),
       setSelectedCluster: (cluster: Cluster) => setSelectedCluster(cluster),
+      programId: (arg0: any[], programId: any) => [programId],
       getExplorerUrl: (path: string) => `https://explorer.solana.com/${path}${getClusterUrlParam(selectedCluster)}`,
     }),
     [selectedCluster, setSelectedCluster],

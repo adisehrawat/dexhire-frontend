@@ -1,10 +1,10 @@
-import { clusterApiUrl } from '@solana/web3.js'
+import { clusterApiUrl, PublicKey } from '@solana/web3.js'
 import { Cluster } from '@/components/cluster/cluster'
 import { ClusterNetwork } from '@/components/cluster/cluster-network'
 
 export class AppConfig {
-  static name = 'dexhire-full'
-  static uri = 'https://example.com'
+  static name = 'dexhire'
+  static uri = 'https://dexhire.com'
   static clusters: Cluster[] = [
     {
       id: 'solana:devnet',

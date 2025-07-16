@@ -1,14 +1,14 @@
+import { AppText } from '@/components/app-text'
+import { useCluster } from '@/components/cluster/cluster-provider'
+import { useWalletUi } from '@/components/solana/use-wallet-ui'
+import { useWalletUiTheme } from '@/components/solana/use-wallet-ui-theme'
+import { UiIconSymbol } from '@/components/ui/ui-icon-symbol.ios'
+import { ellipsify } from '@/utils/ellipsify'
+import Clipboard from '@react-native-clipboard/clipboard'
+import * as Dropdown from '@rn-primitives/dropdown-menu'
 import React, { Fragment } from 'react'
 import { Linking, StyleSheet } from 'react-native'
-import Clipboard from '@react-native-clipboard/clipboard'
-import { useWalletUi } from '@/components/solana/use-wallet-ui'
-import { ellipsify } from '@/utils/ellipsify'
-import { UiIconSymbol } from '@/components/ui/ui-icon-symbol'
-import { useCluster } from '@/components/cluster/cluster-provider'
-import { AppText } from '@/components/app-text'
-import * as Dropdown from '@rn-primitives/dropdown-menu'
 import { WalletUiButtonConnect } from './wallet-ui-button-connect'
-import { useWalletUiTheme } from '@/components/solana/use-wallet-ui-theme'
 
 function useDropdownItems() {
   const { getExplorerUrl } = useCluster()
@@ -38,7 +38,13 @@ export function WalletUiDropdown() {
 
   const items = useDropdownItems()
 
+  // Guard: If account is not present, show connect button
   if (!account || !items.length) {
+    return <WalletUiButtonConnect />
+  }
+
+  // Guard: If account or account.publicKey is not present, show connect button
+  if (!account?.publicKey) {
     return <WalletUiButtonConnect />
   }
 

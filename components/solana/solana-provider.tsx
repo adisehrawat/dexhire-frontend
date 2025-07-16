@@ -21,7 +21,11 @@ export function SolanaProvider({ children, config = { commitment: 'confirmed' } 
 }
 
 export function useSolana(): SolanaProviderState {
-  return useContext(ConnectionContext)
+    const context = useContext(ConnectionContext);
+    if (!context || !context.connection) {
+      throw new Error('useConnection must be used within a SolanaProvider');
+    }
+    return context;
 }
 
 export function useConnection(): Connection {
