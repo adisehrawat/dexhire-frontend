@@ -1,247 +1,184 @@
-import { useCluster } from "@/components/cluster/cluster-provider";
-import { useConnection } from "@/components/solana/solana-provider";
-import { useAuthorization } from '@/components/solana/use-authorization';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
+
 import {
-    Cluster, PublicKey, SystemProgram, Transaction,
+    PublicKey,
+    SystemProgram,
     TransactionMessage,
     VersionedTransaction
 } from "@solana/web3.js";
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import {
-    getDexhireProgram,
-    getDexhireProgramId
-} from '../../dexhire/src/dexhire-exports';
-import { useMobileWallet } from '../solana/use-mobile-wallet';
+
+import { AnchorProvider } from "@coral-xyz/anchor";
+import { useMemo } from "react";
+
+import { useMobileWallet } from '@/components/solana/use-mobile-wallet';
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { DEXHIRE_PROGRAM_ID, getDexhireProgram } from '../../dexhire/src/dexhire-exports';
+import { useConnection } from "../solana/solana-provider";
+import { useAuthorization } from "../solana/use-authorization";
 
 
-interface CreateFreelancerArgs {
-    name: string;
-    email: string;
-    bio: string;
-    linkedin: string;
-    country: string;
-    skills: string[];
-    avatar: string;
-    authority: PublicKey;
+interface CreateFreelancerArgs { name: string; email: string; }
+interface CreateClientArgs { name: string; email: string; }
+
+export function useDexhireAccounts() {
+    const { selectedAccount } = useAuthorization();
+    const dexhireProgramId = useMemo(() => {
+        return new PublicKey(DEXHIRE_PROGRAM_ID);
+    }, []);
+
+    const accounts = useMemo(() => {
+        if (!selectedAccount) return null;
+
+        const userPublicKey = selectedAccount.publicKey;
+
+        const [freelancerProfilePDA] = PublicKey.findProgramAddressSync(
+            [Buffer.from('freelancer'), userPublicKey.toBuffer()],
+            dexhireProgramId
+        );
+
+        const [clientProfilePDA] = PublicKey.findProgramAddressSync(
+            [Buffer.from('client'), userPublicKey.toBuffer()],
+            dexhireProgramId
+        );
+
+        return {
+            freelancerProfilePDA,
+            clientProfilePDA,
+        };
+    }, [selectedAccount, dexhireProgramId]);
+
+    return accounts;
 }
-interface UpdateFreelancerArgs {
-    name: string;
-    email: string;
-    bio: string;
-    linkedin: string;
-    country: string;
-    skills: string[];
-    avatar: string;
-    authority: PublicKey;
-}
 
-interface ClientArgs {
-    name: string;
-    email: string;
-    bio: string;
-    linkedin: string;
-    country: string;
-    avatar: string;
-    authority: PublicKey;
-}
-
+const createMobileAnchorWallet = (selectedAccount: any): any => {
+    return {
+        publicKey: selectedAccount.publicKey,
+        signTransaction: async () => {
+            throw new Error("signTransaction is not implemented by mobile wallet");
+        },
+        signAllTransactions: async () => {
+            throw new Error("signAllTransactions is not implemented by mobile wallet");
+        },
+    };
+};
 
 export function useDexhireProgram() {
     const connection = useConnection();
-    const { selectedCluster } = useCluster();
-    const { selectedAccount } = useAuthorization();
-    // const mobileWallet = useMobileWallet();
-    const { connect } = useMobileWallet();
-    const wallet = useMemo(() => {
-        if (!selectedAccount) return null;
-        return {
-            publicKey: selectedAccount.publicKey,
-            async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> { return tx; },
-            async signAllTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]> { return txs; },
-            async signTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]> { return txs; },
-        };
-    }, [selectedAccount]);
+    // const connection  = new Connection(`https://solana-devnet.g.alchemy.com/v2/9S-NPXqlxQYT3q3e4pG2F`,{
+    //     commitment: "confirmed",
+    // });
 
+    const selectedAccount = useAuthorization();
 
-    useMemo(() => {
-        console.log('Solana connection:', connection);
-    }, [connection]);
+    const { connect, signAndSendTransaction } = useMobileWallet();
 
-    const cluster = useMemo(() => {
-        return selectedCluster;
-    }, [selectedCluster]);
+    const dexhireProgramId = useMemo(() => {
+        return new PublicKey(DEXHIRE_PROGRAM_ID);
+    }, []);
 
     const provider = useMemo(() => {
-        if (!wallet || !connection) {
-            console.error('Provider not initialized: wallet or connection missing', { wallet, connection });
-            return null;
-        }
-        return new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
-    }, [connection, wallet]);
+        if (!selectedAccount) return null;
+        const wallet = createMobileAnchorWallet(selectedAccount);
+        return new AnchorProvider(connection, wallet, {
+            preflightCommitment: "confirmed",
+            commitment: "processed",
+        });
+    }, [selectedAccount, connection]);
 
 
-    const programId = useMemo(
-        () => getDexhireProgramId(cluster.network as Cluster),
-        [cluster]
-    );
-
-    const program = useMemo(() => {
+    const dexhireProgram = useMemo(() => {
         if (!provider) return null;
-        return getDexhireProgram(provider, programId);
-    }, [provider, programId]);
+        return getDexhireProgram(provider, dexhireProgramId);
+    }, [provider, dexhireProgramId]);
 
-    const getProgram = useMemo(() => {
-        return program;
-    }, [program]);
 
-    const getProgramId = useMemo(() => {
-        return programId;
-    }, [programId]);
-
-    const accounts = useMemo(() => {
-        if (!wallet) return null;
-        return {
-            freelanceprofile: PublicKey.findProgramAddressSync(
-                [Buffer.from('freelanceprofile'), wallet.publicKey.toBuffer()],
-                getProgramId
-            )[0],
-            clientprofile: PublicKey.findProgramAddressSync(
-                [Buffer.from('clientprofile'), wallet.publicKey.toBuffer()],
-                getProgramId
-            )[0],
-
-        }
-    }, [getProgramId, wallet]);
-
+    // createFreelancer mutation
     const createFreelancer = useMutation<string, Error, CreateFreelancerArgs>({
         mutationKey: ['create-freelancer'],
         mutationFn: async ({ name, email }) => {
-            if (!wallet || !getProgram || !connection) throw new Error('Wallet, program, or connection not initialized');
+            if (!dexhireProgram || !connection) throw new Error('Wallet, program, or connection not initialized');
             try {
+                const account = await connect(); // from useMobileWallet
+                const publicKey = account.publicKey;
+                console.log(`Public Key: ${publicKey}`);
+
                 const [freelancerProfilePDA] = PublicKey.findProgramAddressSync(
-                    [Buffer.from('freelancer'), wallet.publicKey.toBuffer()],
-                    getProgramId
+                    [Buffer.from('freelancer'), publicKey.toBuffer()],
+                    dexhireProgramId
                 );
-                const ix = await getProgram.methods
+                console.log(`freelancer key: ${freelancerProfilePDA.toBase58()}`);
+                const ix = await dexhireProgram.methods
                     .createFreelanceProfile(name, email)
                     .accountsStrict({
                         freelanceprofile: freelancerProfilePDA,
-                        owner: wallet.publicKey,
+                        owner: publicKey,
                         systemProgram: SystemProgram.programId,
-                    })
-                    .instruction();
+                    }).instruction();
 
-                // Get latest blockhash
-                const latestBlockhash = await connection.getLatestBlockhash('finalized');
+                console.log(`Instruction done: ${ix}`);
 
-                // Build VersionedTransaction
+                const { context, value } = await connection.getLatestBlockhashAndContext();
+                const { blockhash, lastValidBlockHeight } = value;
                 const messageV0 = new TransactionMessage({
-                    payerKey: wallet.publicKey,
-                    recentBlockhash: latestBlockhash.blockhash,
+                    payerKey: publicKey,
+                    recentBlockhash: blockhash,
                     instructions: [ix],
                 }).compileToV0Message();
-                const unsignedTx = new VersionedTransaction(messageV0);
+                console.log(`messagevo done: ${messageV0}`);
 
-                // Always call connect and check for errors
-                try {
-                    await connect();
-                } catch (err) {
-                    throw new Error('Wallet authorization failed. Please reconnect your wallet.');
-                }
+                const versionedTx = new VersionedTransaction(messageV0);
+                console.log(`versionedtx done: ${versionedTx}`);
 
-                // Sign using SMS
-                const signedTx = await transact(async (walletAdapter) => {
-                    const signedTxs = await walletAdapter.signTransactions({
-                        transactions: [unsignedTx],
-                    });
-                    return signedTxs[0];
-                });
+                // Send and sign transaction using mobile wallet
+                const signature = await signAndSendTransaction(versionedTx, context.slot);
+                console.log(`signature done: ${signature}`);
+                await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
 
-                // Send the signed transaction
-                const txSignature = await connection.sendTransaction(signedTx, {
-                    skipPreflight: false,
-                    preflightCommitment: 'confirmed',
-                });
+                return signature;
 
-                // Confirm the transaction
-                const confirmationResult = await connection.confirmTransaction(
-                    {
-                        signature: txSignature,
-                        blockhash: latestBlockhash.blockhash,
-                        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                    },
-                    'confirmed'
-                );
-                if (confirmationResult.value.err) {
-                    throw new Error(JSON.stringify(confirmationResult.value.err));
-                }
-                return txSignature;
             } catch (error) {
                 console.error('Error creating freelancer profile:', error);
                 throw error;
             }
         }
     });
-    const createClient = useMutation<string, Error, ClientArgs>({
-        mutationKey: ['create-client', 'create', { cluster }],
+
+    // createClient mutation
+    const createClient = useMutation<string, Error, CreateClientArgs>({
+        mutationKey: ['create-client'], // Fix mutation key
         mutationFn: async ({ name, email }) => {
-            if (!wallet || !getProgram || !connection) throw new Error('Wallet, program, or connection not initialized');
+            if (!dexhireProgram || !connection) throw new Error('Wallet, program, or connection not initialized');
             try {
+                const account = await connect(); // from useMobileWallet
+                const publicKey = account.publicKey;
+
                 const [clientProfilePDA] = PublicKey.findProgramAddressSync(
-                    [Buffer.from('clientprofile'), wallet.publicKey.toBuffer()],
-                    getProgramId
+                    [Buffer.from('client'), publicKey.toBuffer()],
+                    dexhireProgramId
                 );
-                const ix = await getProgram.methods
-                    .createClientProfile(name, email)
+                const ix = await dexhireProgram.methods
+                    .createClientProfile(name, email) // Fix method name
                     .accountsStrict({
-                        clientprofile: clientProfilePDA,
-                        owner: wallet.publicKey,
+                        clientprofile: clientProfilePDA, // Fix account name
+                        owner: publicKey,
                         systemProgram: SystemProgram.programId,
-                    })
-                    .instruction();
+                    }).instruction();
 
-                // Get latest blockhash
-                const latestBlockhash = await connection.getLatestBlockhash('finalized');
-
-                // Build VersionedTransaction
+                const { context, value } = await connection.getLatestBlockhashAndContext();
+                const { blockhash, lastValidBlockHeight } = value;
                 const messageV0 = new TransactionMessage({
-                    payerKey: wallet.publicKey,
-                    recentBlockhash: latestBlockhash.blockhash,
+                    payerKey: publicKey,
+                    recentBlockhash: blockhash,
                     instructions: [ix],
                 }).compileToV0Message();
-                const unsignedTx = new VersionedTransaction(messageV0);
 
-                await connect(); // Ensure wallet is authorized
-                // Sign using SMS
-                const signedTx = await transact(async (walletAdapter) => {
-                    const signedTxs = await walletAdapter.signTransactions({
-                        transactions: [unsignedTx],
-                    });
-                    return signedTxs[0];
-                });
+                const versionedTx = new VersionedTransaction(messageV0);
 
-                // Send the signed transaction
-                const txSignature = await connection.sendTransaction(signedTx, {
-                    skipPreflight: false,
-                    preflightCommitment: 'confirmed',
-                });
+                // Send and sign transaction using mobile wallet
+                const signature = await signAndSendTransaction(versionedTx, context.slot);
+                await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
 
-                // Confirm the transaction
-                const confirmationResult = await connection.confirmTransaction(
-                    {
-                        signature: txSignature,
-                        blockhash: latestBlockhash.blockhash,
-                        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-                    },
-                    'confirmed'
-                );
-                if (confirmationResult.value.err) {
-                    throw new Error(JSON.stringify(confirmationResult.value.err));
-                }
-                return txSignature;
+                return signature;
+
             } catch (error) {
                 console.error('Error creating client profile:', error);
                 throw error;
@@ -252,159 +189,46 @@ export function useDexhireProgram() {
     return {
         createFreelancer,
         createClient,
-        getProgram,
-        program,
-        getProgramId,
-        accounts,
-    }
+        provider,
+        dexhireProgram,
+        dexhireProgramId,
+    };
 }
-
-export function useDexhireProgramAccount({ account }: { account: PublicKey }) {
-    // const { connection } = useConnection();
-    const cluster = useCluster();
+export function useFetchProfile() {
+    const connection = useConnection();
     const { selectedAccount } = useAuthorization();
+    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
+    const dexhireProgram = useDexhireProgram().dexhireProgram;
 
-    const wallet = useMemo(() => {
-        if (!selectedAccount) return null;
-        return {
-            publicKey: selectedAccount.publicKey,
-            async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> { return tx; },
-            async signAllTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]> { return txs; },
-            async signTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]> { return txs; },
-        };
-    }, [selectedAccount]);
-
-    const { getProgram, getProgramId } = useDexhireProgram();
-
-    // const provider = useMemo(() => {
-    //     return new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
-    // }, [connection, wallet]);
-
-    // const accountInfo = useQuery({
-    //     queryKey: ['account-info', account.toBase58()],
-    //     queryFn: async () => {
-    //         const accountInfo = await connection.getAccountInfo(account);
-    //         return accountInfo;
-    //     },
-    //     enabled: !!account,
-    // });
-    const freelancerQuery = useQuery({
-        queryKey: ["freelanceprofile", "fetch", { cluster, account }],
-        queryFn: () => {
-            if (!getProgram) throw new Error('Program not initialized');
-            return getProgram.account.freelancerProfile.fetch(account);
+    return useQuery({
+        queryKey: ['fetch-profile', selectedAccount?.publicKey?.toBase58()],
+        queryFn: async () => {
+            if (!selectedAccount || !dexhireProgram) return null;
+            const publicKey = selectedAccount.publicKey;
+            // Check freelancer profile
+            const [freelancerProfilePDA] = PublicKey.findProgramAddressSync(
+                [Buffer.from('freelancer'), publicKey.toBuffer()],
+                dexhireProgramId
+            );
+            try {
+                const freelancerProfile = await dexhireProgram.account.freelancerProfile.fetch(freelancerProfilePDA);
+                return { ...freelancerProfile, userType: 'freelancer' };
+            } catch (e) {
+                // Not found, try client
+            }
+            // Check client profile
+            const [clientProfilePDA] = PublicKey.findProgramAddressSync(
+                [Buffer.from('client'), publicKey.toBuffer()],
+                dexhireProgramId
+            );
+            try {
+                const clientProfile = await dexhireProgram.account.clientProfile.fetch(clientProfilePDA);
+                return { ...clientProfile, userType: 'client' };
+            } catch (e) {
+                // Not found
+            }
+            return null;
         },
+        enabled: !!selectedAccount && !!dexhireProgram,
     });
-    const clientQuery = useQuery({
-        queryKey: ["clientprofile", "fetch", { cluster, account }],
-        queryFn: () => {
-            if (!getProgram) throw new Error('Program not initialized');
-            return getProgram.account.clientProfile.fetch(account);
-        },
-    });
-
-
-    const updateFreelancer = useMutation<string, Error, UpdateFreelancerArgs>({
-        mutationKey: ['update-freelancer', 'update', { cluster }],
-        mutationFn: async ({ name, email, bio, linkedin, country, skills, avatar }) => {
-            if (!wallet || !getProgram) throw new Error('Wallet or program not initialized');
-            try {
-                const [freelancerProfilePDA] = PublicKey.findProgramAddressSync(
-                    [Buffer.from('freelanceprofile'), wallet.publicKey.toBuffer()],
-                    getProgramId
-                );
-                const tx = await getProgram.methods
-                    .updateFreelanceProfile(name, email, bio, skills.map(skill => ({ name: skill })), country, linkedin)
-                    .accountsStrict({
-                        freelanceprofile: freelancerProfilePDA,
-                        owner: wallet.publicKey,
-                        systemProgram: SystemProgram.programId,
-                    })
-                    .rpc();
-                return tx;
-            } catch (error) {
-                console.error('Error updating freelancer profile:', error);
-                throw error;
-            }
-        }
-    });
-
-    const updateClient = useMutation<string, Error, ClientArgs>({
-        mutationKey: ['update-client', 'update', { cluster }],
-        mutationFn: async ({ name, email, bio, linkedin, country }) => {
-            if (!wallet || !getProgram) throw new Error('Wallet or program not initialized');
-            try {
-                const [clientProfilePDA] = PublicKey.findProgramAddressSync(
-                    [Buffer.from('clientprofile'), wallet.publicKey.toBuffer()],
-                    getProgramId
-                );
-                const tx = await getProgram.methods
-                    .updateClientProfile(name, email, bio, country, linkedin)
-                    .accountsStrict({
-                        clientprofile: clientProfilePDA,
-                        owner: wallet.publicKey,
-                        systemProgram: SystemProgram.programId,
-                    })
-                    .rpc();
-                return tx;
-            } catch (error) {
-                console.error('Error updating client profile:', error);
-                throw error;
-            }
-        }
-    })
-
-    const deleteFreelancer = useMutation<string, Error, { account: PublicKey }>({
-        mutationKey: ['delete-freelancer', 'delete', { cluster }],
-        mutationFn: async ({ account }) => {
-            if (!wallet || !getProgram) throw new Error('Wallet or program not initialized');
-            try {
-                const tx = await getProgram.methods
-                    .deleteFreelanceProfile()
-                    .accountsStrict({
-                        freelanceprofile: account,
-                        owner: wallet.publicKey,
-                        systemProgram: SystemProgram.programId,
-                    })
-                    .rpc();
-                return tx;
-            } catch (error) {
-                console.error('Error deleting freelancer profile:', error);
-                throw error;
-            }
-        }
-    });
-
-    const deleteClient = useMutation<string, Error, { account: PublicKey }>({
-        mutationKey: ['delete-client', 'delete', { cluster }],
-        mutationFn: async ({ account }) => {
-            if (!wallet || !getProgram) throw new Error('Wallet or program not initialized');
-            try {
-                const tx = await getProgram.methods
-                    .deleteClientProfile()
-                    .accountsStrict({
-                        clientprofile: account,
-                        owner: wallet.publicKey,
-                        systemProgram: SystemProgram.programId,
-                    })
-                    .rpc();
-                return tx;
-            } catch (error) {
-                console.error('Error deleting client profile:', error);
-                throw error;
-            }
-        }
-    });
-
-    return {
-        freelancerQuery,
-        clientQuery,
-        updateFreelancer,
-        updateClient,
-        deleteFreelancer,
-        deleteClient,
-    }
-
-
-
 }

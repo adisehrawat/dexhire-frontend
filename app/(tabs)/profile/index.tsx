@@ -3,6 +3,7 @@ import { WalletUiButtonDisconnect } from '@/components/solana/wallet-ui-button-d
 import { Avatar } from '@/components/ui/Avatar';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useRouter } from 'expo-router';
+import { useDexhireProgram } from '@/components/profile-imports/profile-data-access';
 import { Briefcase, CreditCard, CreditCard as Edit3, Linkedin, Mail, MapPin, Settings, User } from 'lucide-react-native';
 import React from 'react';
 import {
