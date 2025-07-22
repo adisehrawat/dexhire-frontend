@@ -9,7 +9,7 @@ export class AppConfig {
     {
       id: 'solana:devnet',
       name: 'Devnet',
-      endpoint: clusterApiUrl('devnet'),
+      endpoint: 'https://api.devnet.solana.com',
       network: ClusterNetwork.Devnet,
     },
     {

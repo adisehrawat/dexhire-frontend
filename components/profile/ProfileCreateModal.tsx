@@ -1,10 +1,11 @@
-import { useProfile, UserProfile } from '@/contexts/ProfileContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useDexhireProgram, useFetchProfile } from '../profile-imports/profile-data-access';
+import { useDexhireProgram } from '../profile-imports/freelancerProfile-data-access'; // ✅ Updated import
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { useWalletUi } from '@/components/solana/use-wallet-ui';
 
 interface ProfileCreateModalProps {
   visible: boolean;
@@ -13,53 +14,80 @@ interface ProfileCreateModalProps {
 
 const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClose }) => {
   const { setProfile } = useProfile();
-  const { createFreelancer, createClient } = useDexhireProgram();
-  const { data: existingProfile, isLoading: checkingProfile } = useFetchProfile();
   const queryClient = useQueryClient();
+  const { createFreelancer, accounts } = useDexhireProgram(); // ✅ Pull in account list and create mutation
+  const { account } = useWalletUi();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [userType, setUserType] = useState<'freelancer' | 'client'>('freelancer');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [profileJustCreated, setProfileJustCreated] = useState(false);
+
+  const existingProfile = accounts?.data;
+  const isLoadingAccounts = accounts?.isLoading;
+
+  // Reset form and loading state when modal is closed
+  useEffect(() => {
+    if (!visible) {
+      setSubmitting(false);
+      setProfileJustCreated(false);
+      setName('');
+      setEmail('');
+      setError(null);
+      setUserType('freelancer');
+    }
+  }, [visible]);
 
   useEffect(() => {
-    if (existingProfile) {
-      setError(`You already have a ${existingProfile.userType} profile. You cannot create another profile.`);
-    } else {
-      setError(null);
+    if (profileJustCreated && existingProfile) {
+      const newProfile = existingProfile.find((p: any) =>
+        p.account.authority.toBase58() === account?.publicKey.toBase58()
+      );
+      if (newProfile) {
+        setProfile({
+          name: newProfile.account.name,
+          email: newProfile.account.email,
+          userType: 'freelancer',
+          linkedin: newProfile.account.linkedin || '',
+          country: newProfile.account.country || '',
+        });
+        setProfileJustCreated(false);
+        setSubmitting(false);
+        onClose();
+      }
     }
-  }, [existingProfile]);
+  }, [existingProfile, setProfile, account?.publicKey, onClose, profileJustCreated]);
 
   const handleSubmit = async () => {
     setError(null);
-    if (existingProfile) {
-      setError(`You already have a ${existingProfile.userType} profile. You cannot create another profile.`);
-      return;
-    }
+
     if (!name.trim() || !email.trim()) {
       setError('Please enter your name and email.');
       return;
     }
+
+    const alreadyExists = existingProfile?.some(profile =>
+      profile.account.authority.toBase58() === account?.publicKey.toBase58()
+    );
+
+    if (alreadyExists) {
+      setError('You already have a profile tied to your wallet.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (userType === 'freelancer') {
-        await createFreelancer.mutateAsync({ name: name.trim(), email: email.trim() });
+        await createFreelancer.mutateAsync({ name, email });
+        setSubmitting(false);
       } else {
-        await createClient.mutateAsync({ name: name.trim(), email: email.trim() });
+        // Future: Handle client profile logic here
       }
-      
-      // Invalidate and refetch profile data
-      await queryClient.invalidateQueries({ queryKey: ['fetch-profile'] });
-      const updatedProfile = await queryClient.fetchQuery({ queryKey: ['fetch-profile'] });
-      
-      if (updatedProfile) {
-        setProfile(updatedProfile as UserProfile);
-      } else {
-        throw new Error('Failed to fetch updated profile');
-      }
-      
-      setSubmitting(false);
-      onClose();
+
+      await accounts.refetch();
+      setProfileJustCreated(true);
     } catch (err: any) {
       setError(err?.message || 'Failed to create profile.');
       setSubmitting(false);
@@ -71,12 +99,13 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>Create Your Profile</Text>
-          {checkingProfile ? (
+          {/* Remove checkingProfile and existingProfile logic from UI */}
+          {/* {checkingProfile ? (
             <Text style={styles.loadingText}>Checking existing profile...</Text>
           ) : existingProfile ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                You already have a {existingProfile.userType} profile. You cannot create another profile.
+                You already have a {existingProfile.map(profile => profile.publicKey.toBase58())} profile. You cannot create another profile.
               </Text>
               <Button
                 title="Close"
@@ -84,7 +113,8 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
                 style={styles.button}
               />
             </View>
-          ) : (
+          ) : ( */}
+            {/* Always show the form now */}
             <>
               <View style={styles.userTypeContainer}>
                 <Text style={styles.userTypeLabel}>I am a:</Text>
@@ -122,7 +152,7 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
               <Button
                 title={submitting ? 'Saving...' : 'Create Profile'}
                 onPress={handleSubmit}
-                disabled={submitting || !!existingProfile}
+                disabled={submitting}
                 loading={submitting}
                 style={styles.button}
               />
@@ -130,7 +160,7 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             </>
-          )}
+          {/* )} */}
         </View>
       </View>
     </Modal>
@@ -199,13 +229,6 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
     fontWeight: '600',
   },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 13,
-    marginTop: 8,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
   button: {
     marginTop: 16,
     width: '100%',
@@ -219,15 +242,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 13,
+    marginTop: 8,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
   loadingText: {
     textAlign: 'center',
     color: '#6B7280',
-    marginVertical: 20,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    padding: 20,
+    marginVertical: 24,
   },
 });
 
-export default ProfileCreateModal; 
+export default ProfileCreateModal;

@@ -3,9 +3,9 @@ import { WalletUiButtonDisconnect } from '@/components/solana/wallet-ui-button-d
 import { Avatar } from '@/components/ui/Avatar';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useRouter } from 'expo-router';
-import { useDexhireProgram } from '@/components/profile-imports/profile-data-access';
+import { useDexhireProgram } from '@/components/profile-imports/freelancerProfile-data-access';
 import { Briefcase, CreditCard, CreditCard as Edit3, Linkedin, Mail, MapPin, Settings, User } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -15,13 +15,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../../components/ui/Card';
+import ProfileCreateModal from '@/components/profile/ProfileCreateModal';
 
 
 export default function ProfileScreen() {
   const { isAuthenticated } = useAuth();
   const { profile } = useProfile();
+  const { accounts } = useDexhireProgram();
   const router = useRouter();
+  const [showProfileModal, setShowProfileModal] = React.useState(false);
   // Remove showEditModal state
+
+  // If profile is created while modal is open, close modal
+  useEffect(() => {
+    if (showProfileModal && profile) {
+      setShowProfileModal(false);
+    }
+  }, [profile, showProfileModal]);
+
+  // Optionally, force refetch of accounts when modal closes (to ensure freshest data)
+  useEffect(() => {
+    if (!showProfileModal) {
+      accounts.refetch && accounts.refetch();
+    }
+  }, [showProfileModal]);
 
   const skills = ['React Native', 'TypeScript', 'Node.js', 'Python', 'UI/UX Design'];
 
@@ -55,9 +72,18 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
-          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/account')}>
-            <Edit3 size={20} color="#2563EB" />
-          </TouchableOpacity>
+          {isAuthenticated && !profile && (
+            <TouchableOpacity style={styles.editButton} onPress={() => {
+              if (!profile) setShowProfileModal(true);
+            }}>
+              <Text style={{ color: '#2563EB', fontWeight: '600' }}>Create Profile</Text>
+            </TouchableOpacity>
+          )}
+          {isAuthenticated && profile && (
+            <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/account')}>
+              <Edit3 size={20} color="#2563EB" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <Card style={styles.profileCard}>
@@ -155,7 +181,7 @@ export default function ProfileScreen() {
         </View>
         </View>
       </ScrollView>
-      {/* Remove ProfileUpdateModal */}
+      <ProfileCreateModal visible={showProfileModal} onClose={() => setShowProfileModal(false)} />
     </SafeAreaView>
   );
 }

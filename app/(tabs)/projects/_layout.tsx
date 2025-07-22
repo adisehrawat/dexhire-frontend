@@ -1,8 +1,7 @@
-import { WalletUiDropdown } from '@/components/solana/wallet-ui-dropdown'
 import { Stack } from 'expo-router'
 import React from 'react'
 
-export default function SettingsLayout() {
+export default function ProjectsLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
