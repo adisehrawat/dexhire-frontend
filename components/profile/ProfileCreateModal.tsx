@@ -2,10 +2,11 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useDexhireProgram } from '../profile-imports/freelancerProfile-data-access'; // ✅ Updated import
+import { useCreateClientProfile, useCreateFreelancerProfile } from '@/components/data/dexhire-data-access';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useWalletUi } from '@/components/solana/use-wallet-ui';
+import { router } from 'expo-router';
 
 interface ProfileCreateModalProps {
   visible: boolean;
@@ -15,7 +16,8 @@ interface ProfileCreateModalProps {
 const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClose }) => {
   const { setProfile } = useProfile();
   const queryClient = useQueryClient();
-  const { createFreelancer, accounts } = useDexhireProgram(); // ✅ Pull in account list and create mutation
+  const createClient = useCreateClientProfile();
+  const createFreelancer = useCreateFreelancerProfile();
   const { account } = useWalletUi();
 
   const [name, setName] = useState('');
@@ -25,8 +27,8 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
   const [submitting, setSubmitting] = useState(false);
   const [profileJustCreated, setProfileJustCreated] = useState(false);
 
-  const existingProfile = accounts?.data;
-  const isLoadingAccounts = accounts?.isLoading;
+//   const existingProfile = accounts?.data;
+//   const isLoadingAccounts = accounts?.isLoading;
 
   // Reset form and loading state when modal is closed
   useEffect(() => {
@@ -40,26 +42,6 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
     }
   }, [visible]);
 
-  useEffect(() => {
-    if (profileJustCreated && existingProfile) {
-      const newProfile = existingProfile.find((p: any) =>
-        p.account.authority.toBase58() === account?.publicKey.toBase58()
-      );
-      if (newProfile) {
-        setProfile({
-          name: newProfile.account.name,
-          email: newProfile.account.email,
-          userType: 'freelancer',
-          linkedin: newProfile.account.linkedin || '',
-          country: newProfile.account.country || '',
-        });
-        setProfileJustCreated(false);
-        setSubmitting(false);
-        onClose();
-      }
-    }
-  }, [existingProfile, setProfile, account?.publicKey, onClose, profileJustCreated]);
-
   const handleSubmit = async () => {
     setError(null);
 
@@ -68,25 +50,17 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
       return;
     }
 
-    const alreadyExists = existingProfile?.some(profile =>
-      profile.account.authority.toBase58() === account?.publicKey.toBase58()
-    );
-
-    if (alreadyExists) {
-      setError('You already have a profile tied to your wallet.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       if (userType === 'freelancer') {
         await createFreelancer.mutateAsync({ name, email });
+        router.replace('/(tabs)/profile');
         setSubmitting(false);
       } else {
-        // Future: Handle client profile logic here
+        await createClient.mutateAsync({ name, email });
       }
 
-      await accounts.refetch();
+      await queryClient.invalidateQueries();
       setProfileJustCreated(true);
     } catch (err: any) {
       setError(err?.message || 'Failed to create profile.');
@@ -99,23 +73,6 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <Text style={styles.title}>Create Your Profile</Text>
-          {/* Remove checkingProfile and existingProfile logic from UI */}
-          {/* {checkingProfile ? (
-            <Text style={styles.loadingText}>Checking existing profile...</Text>
-          ) : existingProfile ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
-                You already have a {existingProfile.map(profile => profile.publicKey.toBase58())} profile. You cannot create another profile.
-              </Text>
-              <Button
-                title="Close"
-                onPress={onClose}
-                style={styles.button}
-              />
-            </View>
-          ) : ( */}
-            {/* Always show the form now */}
-            <>
               <View style={styles.userTypeContainer}>
                 <Text style={styles.userTypeLabel}>I am a:</Text>
                 <View style={styles.userTypeButtons}>
@@ -159,10 +116,8 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
               <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={submitting}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-            </>
-          {/* )} */}
+            </View>
         </View>
-      </View>
     </Modal>
   );
 };

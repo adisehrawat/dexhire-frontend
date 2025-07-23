@@ -10,6 +10,7 @@ import { View } from 'react-native'
 import { useTrackLocations } from '@/hooks/use-track-locations'
 import { AppSplashController } from '@/components/app-splash-controller'
 import { useAuth } from '@/components/auth/auth-provider'
+import { ProfileProvider } from '@/contexts/ProfileContext';
 
 SplashScreen.preventAutoHideAsync()
 
@@ -44,9 +45,11 @@ export default function RootLayout() {
     return (
         <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
             <AppProviders>
-                <AppSplashController />
-                <RootNavigator />
-                <StatusBar style="auto" />
+                <ProfileProvider>
+                    <AppSplashController />
+                    <RootNavigator />
+                    <StatusBar style="auto" />
+                </ProfileProvider>
             </AppProviders>
             <PortalHost />
         </View>
