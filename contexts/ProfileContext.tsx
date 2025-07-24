@@ -51,7 +51,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         bio: acc.bio,
         country: acc.country,
         linkedin: acc.linkedin,
-        userType: acc.authority.equals(selectedAccount.publicKey) ? 'freelancer' : 'client',
+        userType: acc.authority.equals(selectedAccount.publicKey) ? 'client' : 'freelancer'
       });
       console.log('[ProfileContext] profile fetched', acc);
     } else {

@@ -18,6 +18,25 @@ import { useCluster } from "../cluster/cluster-provider";
 
 export const PROGRAM_ID = DEXHIRE_PROGRAM_ID;
 
+
+export function useGetProgram(){
+    const connection = useConnection();
+    const { selectedAccount } = useAuthorization();
+    const provider = useMemo(() => {
+        if (!selectedAccount) return null;
+        const wallet = createMobileAnchorWallet(selectedAccount);
+        return new AnchorProvider(connection, wallet, {
+            preflightCommitment: "confirmed",
+            commitment: "processed",
+        });
+    }, [selectedAccount, connection]);
+
+    const dexhireProgram = useMemo(() => {
+        if (!provider) return null;
+        return getDexhireProgram(provider);
+    }, [provider]);
+    return dexhireProgram;
+}
 /* ------------------------------------------------------------------ */
 /* 1.  PDA Helpers                                                    */
 /* ------------------------------------------------------------------ */
@@ -82,7 +101,6 @@ export function useCreateClientProfile() {
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
         const wallet = createMobileAnchorWallet(selectedAccount);
@@ -130,9 +148,7 @@ export function useUpdateClientProfile() {
     const { signAndSendTransaction } = useMobileWallet();
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
-    const cluster = useCluster();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
         const wallet = createMobileAnchorWallet(selectedAccount);
@@ -181,7 +197,6 @@ export function useDeleteClientProfile() {
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
         const wallet = createMobileAnchorWallet(selectedAccount);
@@ -235,7 +250,6 @@ export function useCreateFreelancerProfile() {
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
         const wallet = createMobileAnchorWallet(selectedAccount);
@@ -309,9 +323,7 @@ export function useUpdateFreelancerProfile() {
     const { signAndSendTransaction } = useMobileWallet();
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
-    const cluster = useCluster();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
         const wallet = createMobileAnchorWallet(selectedAccount);
@@ -360,7 +372,6 @@ export function useDeleteFreelancerProfile() {
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
 
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
@@ -435,9 +446,7 @@ export function useCreateProject() {
     const { signAndSendTransaction } = useMobileWallet();
     const { account: walletUiAccount } = useWalletUi();
     const { connect } = useMobileWallet();
-    const cluster = useCluster();
     const { selectedAccount } = useAuthorization();
-    const dexhireProgramId = useMemo(() => new PublicKey(DEXHIRE_PROGRAM_ID), []);
     const provider = useMemo(() => {
         if (!selectedAccount) return null;
         const wallet = createMobileAnchorWallet(selectedAccount);
@@ -454,19 +463,27 @@ export function useCreateProject() {
     return useMutation<string, Error, { name: string; about: string; price: BN; deadline: BN }>({
         mutationKey: ['create-project'],
         mutationFn: async ({ name, about, price, deadline }) => {
-            let publicKey;
-            if (walletUiAccount && walletUiAccount.publicKey) {
-                publicKey = walletUiAccount.publicKey;
-            } else {
-                const mobileAccount = await connect();
-                publicKey = mobileAccount.publicKey;
-            }
-            if (!publicKey) throw new Error("Wallet not initialized");
-            const clientPDA = PDA.clientProfile(publicKey);
-            const projectPDA = PDA.project(name, clientPDA, publicKey);
-            const vaultPDA = PDA.vault(projectPDA);
+            try {
+                console.log('[createProject] starting…');
 
-            const ix = await dexhireProgram?.methods
+                let publicKey: PublicKey;
+                if (walletUiAccount && walletUiAccount.publicKey) {
+                    publicKey = walletUiAccount.publicKey;
+                } else {
+                    const mobileAccount = await connect();
+                    if (!mobileAccount?.publicKey) throw new Error('Wallet not connected');
+                    publicKey = mobileAccount.publicKey;
+                }
+                console.log('[createProject] owner:', publicKey.toString());
+
+                const clientPDA = PDA.clientProfile(publicKey);
+                const projectPDA = PDA.project(name, clientPDA, publicKey);
+                const vaultPDA = PDA.vault(projectPDA);
+                console.log('[createProject] projectPDA:', projectPDA.toString());
+                console.log('[createProject] vaultPDA:', vaultPDA.toString());
+
+                if (!dexhireProgram) throw new Error('Program not ready');
+                const ix = await dexhireProgram?.methods
                 .createProject(name, about, price, deadline)
                 .accountsStrict({
                     project: projectPDA,
@@ -476,16 +493,30 @@ export function useCreateProject() {
                     systemProgram: SystemProgram.programId,
                 })
                 .instruction();
-            const {
-                context: { slot: minContextSlot },
-            } = await connection.getLatestBlockhashAndContext('confirmed');
-            const tx = await buildLegacyTx(connection, [ix], publicKey);
-            const txid = await signAndSendTransaction(tx, minContextSlot);
-            return txid;
+                console.log('[createProject] instruction built');
+
+                // 4. versioned transaction
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+                const messageV0 = new TransactionMessage({
+                    payerKey: publicKey,
+                    recentBlockhash: blockhash,
+                    instructions: [ix],
+                }).compileToV0Message();
+                const tx = new VersionedTransaction(messageV0);
+                console.log('[createProject] versioned tx built');
+
+                // 5. sign & send
+                const txid = await signAndSendTransaction(tx, lastValidBlockHeight);
+                console.log('[createProject] tx sent:', txid);
+                return txid;
+            } catch (err: any) {
+                console.error('[createProject] ERROR:', err);
+                throw err;
+            }
         },
-        onSuccess: () => {
-            console.log("Project created successfully");
-        }
+        onSuccess: (txid) => {
+            console.log('[createProject] SUCCESS:', txid);
+        },
     });
 }
 

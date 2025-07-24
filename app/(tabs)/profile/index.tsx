@@ -29,7 +29,11 @@ export default function ProfileScreen() {
         { icon: Briefcase, title: 'Portfolio', subtitle: 'Showcase your work' },
         { icon: CreditCard, title: 'Account', subtitle: 'Manage account and transactions' },
         { icon: Settings, title: 'Settings', subtitle: 'App preferences' },
+        
     ];
+
+    console.log(profile?.userType);
+
 
     return (
         <SafeAreaView style={styles.container}>

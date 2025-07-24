@@ -1,5 +1,6 @@
-import { useApp } from '@/contexts/AppContext';
-import { Minus } from 'lucide-react-native';
+
+import { useCreateProject } from '@/components/data/dexhire-data-access';
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -14,6 +15,7 @@ import {
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
+import { BN } from '@coral-xyz/anchor';
 
 interface CreateProjectModalProps {
   visible: boolean;
@@ -24,59 +26,36 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { createProject } = useApp();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const queryClient = useQueryClient();
+  const createProject = useCreateProject();
   const [projectData, setProjectData] = useState({
     title: '',
     description: '',
     budget: 0,
-    skills: [] as string[],
     deadline: '',
-    isUrgent: false,
   });
-  const [newSkill, setNewSkill] = useState('');
 
 
 
   const handleCreateProject = async () => {
-    if (!projectData.title.trim() || !projectData.description.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-
-    if (projectData.budget <= 0 ) {
-      Alert.alert('Error', 'Please set a valid budget range');
-      return;
-    }
-
-    if (projectData.skills.length === 0) {
-      Alert.alert('Error', 'Please add at least one required skill');
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      await createProject({
-        ...projectData,
-        deadline: projectData.deadline ? new Date(projectData.deadline).toISOString() : undefined,
-        // NOTE: In a real app, set clientId and client to the current user. Here, we use generic values.
-        clientId: '1',
-        client: {
-          id: '1',
-          email: 'client@example.com',
-          firstName: 'John',
-          userType: 'client',
-          createdAt: new Date().toISOString(),
-          isVerified: true,
-        },
+      await createProject.mutateAsync({
+        name: projectData.title,
+        about: projectData.description,
+        price: new BN(projectData.budget),
+        deadline: new BN(Math.floor(new Date(projectData.deadline).getTime() / 1000)),
       });
-      
-      Alert.alert('Success', 'Your project has been posted successfully!');
+
+      // 👇 re-fetch projects
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+
       resetForm();
       onClose();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create project. Please try again.');
+    } catch (err) {
+      Alert.alert('Error', 'Could not create project');
     } finally {
       setIsSubmitting(false);
     }
@@ -87,30 +66,11 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       title: '',
       description: '',
       budget: 0,
-      skills: [],
       deadline: '',
-      isUrgent: false,
     });
     setCurrentStep(1);
-    setNewSkill('');
   };
 
-  const addSkill = () => {
-    if (newSkill.trim() && !projectData.skills.includes(newSkill.trim())) {
-      setProjectData(prev => ({
-        ...prev,
-        skills: [...prev.skills, newSkill.trim()]
-      }));
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skillToRemove: string) => {
-    setProjectData(prev => ({
-      ...prev,
-      skills: prev.skills.filter(skill => skill !== skillToRemove)
-    }));
-  };
 
   const renderStep1 = () => (
     <View>
@@ -155,64 +115,16 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       </View>
       
       <Input
-        label="Project Deadline (Optional)"
+        label="Project Deadline"
         value={projectData.deadline}
         onChangeText={(text) => setProjectData(prev => ({ ...prev, deadline: text }))}
         placeholder="YYYY-MM-DD"
+        required
       />
       
-      <TouchableOpacity
-        style={styles.urgentToggle}
-        onPress={() => setProjectData(prev => ({ ...prev, isUrgent: !prev.isUrgent }))}
-      >
-        <View style={[styles.checkbox, projectData.isUrgent && styles.checkboxActive]}>
-          {projectData.isUrgent && <Text style={styles.checkmark}>✓</Text>}
-        </View>
-        <Text style={styles.urgentText}>Mark as urgent project</Text>
-      </TouchableOpacity>
     </View>
   );
 
-  const renderStep3 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Required Skills</Text>
-      
-      <View style={styles.skillInputContainer}>
-        <Input
-          label="Add Skills"
-          value={newSkill}
-          onChangeText={setNewSkill}
-          placeholder="Enter a skill and press Add"
-          containerStyle={styles.skillInput}
-        />
-        <Button
-          title="Add"
-          onPress={addSkill}
-          size="small"
-          style={styles.addSkillButton}
-        />
-      </View>
-      
-      {projectData.skills.length > 0 && (
-        <View style={styles.skillsContainer}>
-          <Text style={styles.skillsLabel}>Selected Skills:</Text>
-          <View style={styles.skillsList}>
-            {projectData.skills.map((skill, index) => (
-              <View key={index} style={styles.skillBadge}>
-                <Text style={styles.skillText}>{skill}</Text>
-                <TouchableOpacity
-                  onPress={() => removeSkill(skill)}
-                  style={styles.removeSkill}
-                >
-                  <Minus size={14} color="#2563EB" />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-    </View>
-  );
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -237,7 +149,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <Card style={styles.formCard}>
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
           </Card>
         </ScrollView>
 
@@ -251,7 +162,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             />
           )}
           
-          {currentStep < 3 ? (
+          {currentStep < 2 ? (
             <Button
               title="Next"
               onPress={() => setCurrentStep(prev => prev + 1)}

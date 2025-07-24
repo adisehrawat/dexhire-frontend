@@ -19,12 +19,10 @@ export interface Project {
   clientId: string;
   client: User;
   budget: number;
-  skills: string[];
   status: 'open' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: string;
   deadline?: string;
   proposals: number;
-  isUrgent: boolean;
   attachments?: string[];
 }
 

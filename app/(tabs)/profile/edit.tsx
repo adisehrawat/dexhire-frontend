@@ -53,13 +53,16 @@ export default function ProfileEditPage() {
 
         if (profile!.userType === 'freelancer') {
             await updateFreelancer.mutateAsync(params);
+            router.replace('/(tabs)/profile');
+            await refetchProfile();
+            setSubmitting(false);
         } else {
             await updateClient.mutateAsync(params);
+            router.replace('/(tabs)/profile');
+            await refetchProfile();
+            setSubmitting(false);
         }
 
-        await refetchProfile();
-        setSubmitting(false);
-        router.back();
     };
 
 

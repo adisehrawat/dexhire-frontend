@@ -1,3 +1,4 @@
+// home/index.tsx
 import { CreateProjectModal } from '@/components/CreateProjectModal';
 import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectDetailsModal } from '@/components/ProjectDetailsModal';
@@ -7,7 +8,7 @@ import { useApp } from '@/contexts/AppContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Project } from '@/types';
 import { Filter, UserPlus } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     FlatList,
     RefreshControl,
@@ -20,7 +21,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-
 export default function HomeScreen() {
     const { projects, isLoading, refreshProjects } = useApp();
     const { isAuthenticated } = useAuth();
@@ -31,8 +31,9 @@ export default function HomeScreen() {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const router = useRouter();
 
-
-    const filteredProjects = projects;
+    // 1️⃣  Decide what to render
+    const canShowProjects = isAuthenticated && profile;
+    const needsProfile = isAuthenticated && !profile && isProfileLoaded;
 
     const renderProject = ({ item }: { item: Project }) => (
         <ProjectCard
@@ -44,40 +45,79 @@ export default function HomeScreen() {
         />
     );
 
+    useEffect(() => {
+        if (isAuthenticated && isProfileLoaded && !profile) {
+          setShowProfileModal(true);
+        } else {
+          setShowProfileModal(false);
+        }
+      }, [isAuthenticated, isProfileLoaded, profile]);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            
+            {/* 2️⃣  Banner when wallet connected but no profile */}
+            {needsProfile && (
+                <View style={styles.centerCard}>
+                    <UserPlus size={48} color="#2563EB" />
+                    <Text style={styles.centerTitle}>Create your profile first</Text>
+                    <Text style={styles.centerText}>
+                        You need a client or freelancer profile to see projects.
+                    </Text>
+                    <View style={styles.centerButtons}>
+                        <TouchableOpacity
+                            style={styles.centerBtn}
+                            onPress={() => setShowProfileModal(true)}
+                        >
+                            <Text style={styles.centerBtnText}>Create Profile</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.centerBtn, styles.centerBtnGhost]}
+                            onPress={() => router.push('/(tabs)/profile')}
+                        >
+                            <Text style={[styles.centerBtnText, styles.centerBtnGhostText]}>
+                                Go to Profile tab
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
+            {/* 3️⃣  Normal header + list */}
+
+
+            {/* 5️⃣  Projects list */}
+            {canShowProjects && (
+                <>
                     <View style={styles.header}>
                         <View>
-                            {/* <Text style={styles.greeting}>
-                                {profile?.name
-                                    ? `Welcome, ${profile.name}!`
-                                    : mappedFreelancer.length > 0
-                                        ? `Welcome, ${mappedFreelancer[0].name}!`
-                                        : 'Welcome!'}
-                            </Text> */}
-                            <Text style={styles.greeting}>Welcome</Text>
+                            <Text style={styles.greeting}>
+                                {profile ? `Welcome, ${profile.name}!` : 'Welcome!'}
+                            </Text>
                             <Text style={styles.subtitle}>
                                 Browse available projects and opportunities
                             </Text>
                         </View>
+
                         <View style={styles.headerActions}>
                             <TouchableOpacity style={styles.filterButton}>
                                 <Filter size={20} color="#374151" />
                             </TouchableOpacity>
-                            {/* Show create profile icon if wallet is connected and no profile exists */}
+
+                            {/* 4️⃣  “Create profile” icon when missing */}
                             {isAuthenticated && !profile && (
-                                <TouchableOpacity style={styles.createProfileButton} onPress={() => setShowProfileModal(true)}>
+                                <TouchableOpacity
+                                    style={styles.createProfileButton}
+                                    onPress={() => setShowProfileModal(true)}
+                                >
                                     <UserPlus size={20} color="#2563EB" />
                                 </TouchableOpacity>
                             )}
                         </View>
                     </View>
-
                     <FlatList
-                        data={filteredProjects}
+                        data={projects}
                         renderItem={renderProject}
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={styles.listContainer}
@@ -92,48 +132,60 @@ export default function HomeScreen() {
                             </View>
                         }
                     />
+                </>
+            )}
 
-                    <ProjectDetailsModal
-                        project={selectedProject}
-                        visible={showProjectDetails}
-                        onClose={() => {
-                            setShowProjectDetails(false);
-                            setSelectedProject(null);
-                        }}
-                    />
+            {/* Modals */}
+            <ProjectDetailsModal
+                project={selectedProject}
+                visible={showProjectDetails}
+                onClose={() => {
+                    setShowProjectDetails(false);
+                    setSelectedProject(null);
+                }}
+            />
 
-                    <CreateProjectModal
-                        visible={showCreateProject}
-                        onClose={() => setShowCreateProject(false)}
-                    />
+            <CreateProjectModal
+                visible={showCreateProject}
+                onClose={() => setShowCreateProject(false)}
+            />
 
-                    {/* Floating Action Button - only show if wallet and profile exist and userType is client */}
-                    {isAuthenticated && profile && profile.userType === 'client' && (
-                        <TouchableOpacity
-                            style={styles.fab}
-                            onPress={() => setShowCreateProject(true)}
-                        >
-                            <Text style={styles.fabIcon}>+</Text>
-                        </TouchableOpacity>
-                    )}
+            {/* 6️⃣  FAB for clients */}
+            {canShowProjects && profile.userType === 'client' && (
+                <TouchableOpacity style={styles.fab} onPress={() => setShowCreateProject(true)}>
+                    <Text style={styles.fabIcon}>+</Text>
+                </TouchableOpacity>
+            )}
 
-                    {/* Profile creation modal */}
-                    <ProfileCreateModal
-                        visible={showProfileModal}
-                        onClose={() => {
-                            setShowProfileModal(true);
-                        }}
-                    />
-
+            <ProfileCreateModal
+                visible={showProfileModal}
+                onClose={() => setShowProfileModal(false)}
+            />
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
+    container: { flex: 1, backgroundColor: '#F9FAFB' },
+
+    banner: {
+        backgroundColor: '#fef3c7',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
+    bannerText: { fontSize: 14, color: '#92400e', flexShrink: 1 },
+    bannerBtn: {
+        backgroundColor: '#2563eb',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+        marginLeft: 8,
+    },
+    bannerBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -144,47 +196,26 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
     },
-    greeting: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#111827',
-    },
-    subtitle: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    headerActions: {
-        flexDirection: 'row',
-        gap: 12,
-    },
+    greeting: { fontSize: 20, fontWeight: '600', color: '#111827' },
+    subtitle: { fontSize: 14, color: '#6B7280', marginTop: 2 },
+
+    headerActions: { flexDirection: 'row', gap: 12 },
     filterButton: {
         padding: 8,
         borderRadius: 8,
         backgroundColor: '#F3F4F6',
     },
-    addButton: {
+    createProfileButton: {
         padding: 8,
         borderRadius: 8,
-        backgroundColor: '#2563EB',
+        backgroundColor: '#E0E7FF',
     },
-    listContainer: {
-        padding: 16,
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#374151',
-    },
-    emptySubtext: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginTop: 8,
-    },
+
+    listContainer: { padding: 16 },
+    emptyState: { alignItems: 'center', paddingVertical: 60 },
+    emptyText: { fontSize: 18, fontWeight: '600', color: '#374151' },
+    emptySubtext: { fontSize: 14, color: '#6B7280', marginTop: 8 },
+
     fab: {
         position: 'absolute',
         right: 24,
@@ -195,24 +226,53 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
         elevation: 5,
     },
-    fabIcon: {
-        color: '#fff',
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginBottom: 2,
-    },
-    createProfileButton: {
-        marginLeft: 8,
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: '#E0E7FF',
-        alignItems: 'center',
+    fabIcon: { color: '#fff', fontSize: 32, fontWeight: 'bold', marginBottom: 2 },
+    centerCard: {
+        flex: 1,
         justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    centerTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#111827',
+        marginTop: 16,
+        textAlign: 'center',
+    },
+    centerText: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginTop: 8,
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    centerButtons: {
+        flexDirection: 'column',
+        gap: 12,
+        width: '100%',
+        maxWidth: 240,
+    },
+    centerBtn: {
+        backgroundColor: '#2563EB',
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    centerBtnText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 16,
+    },
+    centerBtnGhost: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: '#2563EB',
+    },
+    centerBtnGhostText: {
+        color: '#2563EB',
     },
 });

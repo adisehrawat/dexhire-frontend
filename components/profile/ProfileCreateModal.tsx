@@ -22,7 +22,7 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [userType, setUserType] = useState<'freelancer' | 'client'>('freelancer');
+  const [userType, setUserType] = useState<'freelancer' | 'client'>('client');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [profileJustCreated, setProfileJustCreated] = useState(false);
@@ -38,7 +38,7 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
       setName('');
       setEmail('');
       setError(null);
-      setUserType('freelancer');
+      setUserType('client');
     }
   }, [visible]);
 
@@ -58,6 +58,8 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
         setSubmitting(false);
       } else {
         await createClient.mutateAsync({ name, email });
+        router.replace('/(tabs)/profile');
+        setSubmitting(false);
       }
 
       await queryClient.invalidateQueries();
