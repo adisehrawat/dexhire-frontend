@@ -7,8 +7,9 @@ import ProfileCreateModal from '@/components/profile/ProfileCreateModal';
 import { useApp } from '@/contexts/AppContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Project } from '@/types';
+import { useRouter } from 'expo-router';
 import { Filter, UserPlus } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     FlatList,
     RefreshControl,
@@ -19,7 +20,6 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
     const { projects, isLoading, refreshProjects } = useApp();
@@ -101,11 +101,6 @@ export default function HomeScreen() {
                         </View>
 
                         <View style={styles.headerActions}>
-                            <TouchableOpacity style={styles.filterButton}>
-                                <Filter size={20} color="#374151" />
-                            </TouchableOpacity>
-
-                            {/* 4️⃣  “Create profile” icon when missing */}
                             {isAuthenticated && !profile && (
                                 <TouchableOpacity
                                     style={styles.createProfileButton}
@@ -137,7 +132,7 @@ export default function HomeScreen() {
 
             {/* Modals */}
             <ProjectDetailsModal
-                project={selectedProject}
+                projectId={selectedProject?.id || null}
                 visible={showProjectDetails}
                 onClose={() => {
                     setShowProjectDetails(false);

@@ -1,5 +1,5 @@
 // contexts/AppContext.tsx
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFetchProjects } from '@/contexts/use-fetch-projects';
 import { useCreateProject } from '@/components/data/dexhire-data-access';
 import React, { createContext, useContext } from 'react';
@@ -9,7 +9,7 @@ import { BN } from '@coral-xyz/anchor';
 interface AppContextType {
   projects: Project[];
   isLoading: boolean;
-  refreshProjects: () => void;
+  refreshProjects: () => Promise<void>;
   createProject: (data: any) => Promise<string>;
 }
 
@@ -29,13 +29,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshProjects = () => queryClient.invalidateQueries({ queryKey: ['projects'] });
 
   const createProject = async (payload: {
-    title: string;
+    name: string;
     description: string;
     budget: number;
     deadline: string;
   }) => {
     await createProjectMutation.mutateAsync({
-      name: payload.title,
+      name: payload.name,
       about: payload.description,
       price: new BN(payload.budget),
       deadline: new BN(Math.floor(new Date(payload.deadline).getTime() / 1000)),

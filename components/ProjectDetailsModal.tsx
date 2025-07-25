@@ -1,4 +1,4 @@
-import { useApp } from '@/contexts/AppContext';
+import { useFetchProjects } from '@/contexts/use-fetch-projects';
 import { Project } from '@/types';
 import {
     Calendar,
@@ -8,7 +8,6 @@ import {
     Heart,
     MapPin,
     Share,
-    Star,
     Users,
     X
 } from 'lucide-react-native';
@@ -29,16 +28,18 @@ import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 
 interface ProjectDetailsModalProps {
-    project: Project | null;
+    projectId: string | null;
     visible: boolean;
     onClose: () => void;
 }
 
 export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
-    project,
+    projectId,
     visible,
     onClose,
 }) => {
+    const { data: projects = [], isLoading } = useFetchProjects();
+    const project = projects.find((p: Project) => p.id === projectId);
     // const { submitProposal } = useApp();
     const [showProposalForm, setShowProposalForm] = useState(false);
     const [proposalData, setProposalData] = useState({
@@ -183,13 +184,13 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
                         <View style={styles.clientInfo}>
                             <Avatar
                                 source={project.client.avatar}
-                                name={`${project.client.firstName} `}
+                                name={`${project.client.name} `}   
                                 size={48}
                             />
                             <View style={styles.clientDetails}>
                                 <View style={styles.clientNameRow}>
                                     <Text style={styles.clientName}>
-                                        {project.client.firstName}
+                                        {project.client.name}
                                     </Text>
                                     {project.client.isVerified && (
                                         <Text style={styles.verifiedIcon}>✓</Text>

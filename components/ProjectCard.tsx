@@ -24,7 +24,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onPress }) =>
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d ago`;
   };
-
+  console.log(project.client.avatar);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <Card style={styles.card}>
@@ -45,11 +45,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onPress }) =>
           <View style={styles.clientInfo}>
             <Avatar 
               source={project.client.avatar || ''} 
-              name={`${project.client.firstName || ''}`} 
+              name={`${project.client.name || ''}`} 
               size={24} 
             />
             <Text style={styles.clientName}>
-              {project.client.firstName || 'Client'}
+              {project.client.name || 'Client'}
             </Text>
             {project.client.isVerified && (
               <Text style={styles.verifiedIcon}>✓</Text>

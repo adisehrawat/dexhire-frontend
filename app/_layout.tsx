@@ -4,6 +4,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import 'react-native-reanimated'
 import { AppProviders } from '@/components/app-providers'
+import { AppProvider } from '@/contexts/AppContext'
 import { useCallback } from 'react'
 import * as SplashScreen from 'expo-splash-screen'
 import { View } from 'react-native'
@@ -46,9 +47,11 @@ export default function RootLayout() {
         <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
             <AppProviders>
                 <ProfileProvider>
-                    <AppSplashController />
-                    <RootNavigator />
-                    <StatusBar style="auto" />
+                    <AppProvider>
+                        <AppSplashController />
+                        <RootNavigator />
+                        <StatusBar style="auto" />
+                    </AppProvider>
                 </ProfileProvider>
             </AppProviders>
             <PortalHost />

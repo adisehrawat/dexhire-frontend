@@ -2,7 +2,7 @@
 export interface User {
   id: string;
   email: string;
-  firstName: string;
+  name: string;
   avatar?: string;
   userType: 'freelancer' | 'client';
   createdAt: string;
