@@ -1,18 +1,20 @@
+import { AppProviders } from '@/components/app-providers'
+import { AppSplashController } from '@/components/app-splash-controller'
+import { useAuth } from '@/components/auth/auth-provider'
+import { AppProvider } from '@/contexts/AppContext'
+import { ProfileProvider } from '@/contexts/ProfileContext'
+import { ClientProjectsProvider } from '@/contexts/use-fetch-client-projects'
+import { ClientProposalsProvider } from '@/contexts/use-fetch-client-proposals'
+import { useTrackLocations } from '@/hooks/use-track-locations'
 import { PortalHost } from '@rn-primitives/portal'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
-import { StatusBar } from 'expo-status-bar'
-import 'react-native-reanimated'
-import { AppProviders } from '@/components/app-providers'
-import { AppProvider } from '@/contexts/AppContext'
-import { useCallback } from 'react'
 import * as SplashScreen from 'expo-splash-screen'
+import { StatusBar } from 'expo-status-bar'
+import { useCallback } from 'react'
 import { View } from 'react-native'
-import { useTrackLocations } from '@/hooks/use-track-locations'
-import { AppSplashController } from '@/components/app-splash-controller'
-import { useAuth } from '@/components/auth/auth-provider'
-import { ProfileProvider } from '@/contexts/ProfileContext';
-
+import 'react-native-reanimated'
+import "./global.css"
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
@@ -47,11 +49,15 @@ export default function RootLayout() {
         <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
             <AppProviders>
                 <ProfileProvider>
-                    <AppProvider>
-                        <AppSplashController />
-                        <RootNavigator />
-                        <StatusBar style="auto" />
-                    </AppProvider>
+                    <ClientProjectsProvider>
+                        <ClientProposalsProvider>
+                            <AppProvider>
+                                <AppSplashController />
+                                <RootNavigator />
+                                <StatusBar style="auto" />
+                            </AppProvider>
+                        </ClientProposalsProvider>
+                    </ClientProjectsProvider>
                 </ProfileProvider>
             </AppProviders>
             <PortalHost />

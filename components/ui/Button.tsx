@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TextStyle,
+    TouchableOpacity,
+    ViewStyle,
 } from 'react-native';
 
 interface ButtonProps {
@@ -63,10 +63,16 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+    marginVertical: 4,
   },
   primary: {
     backgroundColor: '#2563EB',
@@ -76,29 +82,30 @@ const styles = StyleSheet.create({
   },
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#2563EB',
   },
   ghost: {
     backgroundColor: 'transparent',
   },
   small: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   medium: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
   large: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 18,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   text: {
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.01,
   },
   primaryText: {
     color: '#fff',
@@ -113,13 +120,13 @@ const styles = StyleSheet.create({
     color: '#2563EB',
   },
   smallText: {
-    fontSize: 14,
+    fontSize: 15,
   },
   mediumText: {
-    fontSize: 16,
+    fontSize: 17,
   },
   largeText: {
-    fontSize: 18,
+    fontSize: 19,
   },
   disabledText: {
     color: '#9CA3AF',

@@ -17,7 +17,6 @@ const ProfileUpdateModal: React.FC<ProfileUpdateModalProps> = ({ visible, onClos
     const [bio, setBio] = useState(profile?.bio || '');
     const [linkedin, setLinkedin] = useState(profile?.linkedin || '');
     const [country, setCountry] = useState(profile?.country || '');
-    const [skills, setSkills] = useState((profile?.skills || []).join(', '));
     const [submitting, setSubmitting] = useState(false);
     const deleteClient = useDeleteClientProfile();
     const deleteFreelancer = useDeleteFreelancerProfile();
@@ -52,7 +51,6 @@ const ProfileUpdateModal: React.FC<ProfileUpdateModalProps> = ({ visible, onClos
             bio: bio.trim(),
             linkedin: linkedin.trim(),
             country: country.trim(),
-            skills: isFreelancer ? skills.split(',').map(s => s.trim()).filter(Boolean) : undefined,
         });
         setSubmitting(false);
         onClose();
@@ -100,14 +98,7 @@ const ProfileUpdateModal: React.FC<ProfileUpdateModalProps> = ({ visible, onClos
                             onChangeText={setCountry}
                             containerStyle={styles.input}
                         />
-                        {isFreelancer && (
-                            <Input
-                                label="Skills (comma separated)"
-                                value={skills}
-                                onChangeText={setSkills}
-                                containerStyle={styles.input}
-                            />
-                        )}
+
                         <TouchableOpacity style={styles.button} onPress={handleSave} disabled={submitting}>
                             <Text style={styles.buttonText}>{submitting ? 'Saving...' : 'Save Changes'}</Text>
                         </TouchableOpacity>

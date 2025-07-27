@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import { MoveHorizontal as MoreHorizontal, Phone, Search, Send, Video } from 'lucide-react-native';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Search, Send, Phone, Video, MoveHorizontal as MoreHorizontal } from 'lucide-react-native';
-import { Avatar } from '../../../components/ui/Avatar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Avatar } from '../../../components/ui/Avatar';
+
+import { useClientProposals } from '@/contexts/use-fetch-client-proposals';
+import { Proposal } from '@/types';
 
 interface Message {
   id: string;
@@ -37,38 +40,20 @@ export default function MessagesScreen() {
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const conversations: Conversation[] = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      avatar: 'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=150&h=150',
-      lastMessage: 'The design mockups are ready for review',
-      timestamp: '2m ago',
-      isOnline: true,
-      unreadCount: 2,
-      project: 'Mobile App Design',
-    },
-    {
-      id: '2',
-      name: 'Mike Chen',
-      avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=150&h=150',
-      lastMessage: 'Can we schedule a call tomorrow?',
-      timestamp: '1h ago',
-      isOnline: false,
-      unreadCount: 0,
-      project: 'E-commerce Website',
-    },
-    {
-      id: '3',
-      name: 'Emily Rodriguez',
-      avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=150&h=150',
-      lastMessage: 'Thanks for the quick turnaround!',
-      timestamp: '3h ago',
-      isOnline: true,
-      unreadCount: 0,
-      project: 'Python Data Analysis',
-    },
-  ];
+  // Use proposals from context
+  const { proposals = [], isLoading, refetch } = useClientProposals();
+
+  // Map proposals to conversations
+  const conversations = proposals.map((proposal: Proposal) => ({
+    id: proposal.id,
+    name: proposal.freelancer?.name || 'Freelancer',
+    avatar: proposal.freelancer?.avatar || '',
+    lastMessage: proposal.coverLetter || '',
+    timestamp: proposal.createdAt || '',
+    isOnline: false, // No online status available
+    unreadCount: 0, // No unread logic yet
+    project: proposal.projectId || '',
+  }));
 
   const messages: Message[] = [
     {
@@ -170,13 +155,18 @@ export default function MessagesScreen() {
           />
         </View>
       </View>
-      
-      <FlatList
-        data={conversations}
-        renderItem={renderConversation}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <Text style={{ textAlign: 'center', marginTop: 32 }}>Loading proposals...</Text>
+      ) : conversations.length === 0 ? (
+        <Text style={{ textAlign: 'center', marginTop: 32 }}>No proposals found for your projects yet.</Text>
+      ) : (
+        <FlatList
+          data={conversations}
+          renderItem={renderConversation}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 

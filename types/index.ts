@@ -17,13 +17,20 @@ export interface Project {
   title: string;
   description: string;
   clientId: string;
+  clientWallet: string;
   client: User;
   budget: number;
-  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'created' | 'approved' | 'in_progress' | 'work_submitted' | 'completed' | 'cancelled';
   createdAt: string;
   deadline?: string;
   proposals: number;
   attachments?: string[];
+  isPublic: boolean;
+  freelancerId?: string;
+  freelancer?: User;
+  githubLink?: string;
+  workSubmittedAt?: string;
+  isCompleted: boolean;
 }
 
 export interface Proposal {

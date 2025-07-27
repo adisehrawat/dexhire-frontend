@@ -4,11 +4,14 @@ import { ProjectCard } from '@/components/ProjectCard';
 import { ProjectDetailsModal } from '@/components/ProjectDetailsModal';
 import { useAuth } from '@/components/auth/auth-provider';
 import ProfileCreateModal from '@/components/profile/ProfileCreateModal';
+import { useAuthorization } from '@/components/solana/use-authorization';
+import { LIGHT_COLORS } from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Project } from '@/types';
+import { PublicKey } from '@solana/web3.js';
 import { useRouter } from 'expo-router';
-import { Filter, UserPlus } from 'lucide-react-native';
+import { UserPlus } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
     FlatList,
@@ -30,10 +33,22 @@ export default function HomeScreen() {
     const [showCreateProject, setShowCreateProject] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const router = useRouter();
-
+    const { selectedAccount } = useAuthorization();
     // 1️⃣  Decide what to render
     const canShowProjects = isAuthenticated && profile;
     const needsProfile = isAuthenticated && !profile && isProfileLoaded;
+
+    // Filter projects to show only approved ones that are still open for proposals
+    // (approved status + no freelancer assigned = open for proposals)
+    const approvedProjects = projects.filter(project =>
+        project.isPublic && 
+        !project.freelancerId
+        // project.clientId === selectedAccount?.publicKey?.toString()
+    );
+
+    console.log('[HomeScreen] Total projects:', projects.length);
+    console.log('[HomeScreen] Approved projects without freelancer:', approvedProjects.length);
+    console.log('[HomeScreen] Projects with freelancers:', projects.filter(p => p.freelancerId).length);
 
     const renderProject = ({ item }: { item: Project }) => (
         <ProjectCard
@@ -90,29 +105,29 @@ export default function HomeScreen() {
             {/* 5️⃣  Projects list */}
             {canShowProjects && (
                 <>
-                    <View style={styles.header}>
-                        <View>
+                    <View style={styles.headerCard}>
+                        <View style={styles.accentBar} />
+                        <View style={styles.headerContent}>
                             <Text style={styles.greeting}>
-                                {profile ? `Welcome, ${profile.name}!` : 'Welcome!'}
+                                {profile ? `👋 Welcome, ${profile.name}!` : '👋 Welcome!'}
                             </Text>
                             <Text style={styles.subtitle}>
                                 Browse available projects and opportunities
                             </Text>
                         </View>
-
                         <View style={styles.headerActions}>
                             {isAuthenticated && !profile && (
                                 <TouchableOpacity
-                                    style={styles.createProfileButton}
+                                    style={styles.createProfileFab}
                                     onPress={() => setShowProfileModal(true)}
                                 >
-                                    <UserPlus size={20} color="#2563EB" />
+                                    <UserPlus size={22} color="#fff" />
                                 </TouchableOpacity>
                             )}
                         </View>
                     </View>
                     <FlatList
-                        data={projects}
+                        data={approvedProjects}
                         renderItem={renderProject}
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={styles.listContainer}
@@ -132,7 +147,7 @@ export default function HomeScreen() {
 
             {/* Modals */}
             <ProjectDetailsModal
-                projectId={selectedProject?.id || null}
+                projectPDA={selectedProject?.id || null}
                 visible={showProjectDetails}
                 onClose={() => {
                     setShowProjectDetails(false);
@@ -161,7 +176,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9FAFB' },
+    container: { flex: 1, backgroundColor: LIGHT_COLORS.background },
 
     banner: {
         backgroundColor: '#fef3c7',
@@ -187,14 +202,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 16,
-        backgroundColor: '#fff',
+        backgroundColor: LIGHT_COLORS.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
+        borderBottomColor: LIGHT_COLORS.border,
     },
-    greeting: { fontSize: 20, fontWeight: '600', color: '#111827' },
-    subtitle: { fontSize: 14, color: '#6B7280', marginTop: 2 },
-
-    headerActions: { flexDirection: 'row', gap: 12 },
     filterButton: {
         padding: 8,
         borderRadius: 8,
@@ -215,7 +226,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 24,
         bottom: 32,
-        backgroundColor: '#2563EB',
+        backgroundColor: LIGHT_COLORS.primary,
         width: 56,
         height: 56,
         borderRadius: 28,
@@ -269,5 +280,61 @@ const styles = StyleSheet.create({
     },
     centerBtnGhostText: {
         color: '#2563EB',
+    },
+    headerCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: LIGHT_COLORS.surface,
+        borderRadius: 18,
+        marginHorizontal: 16,
+        marginTop: 16,
+        marginBottom: 8,
+        paddingVertical: 18,
+        paddingHorizontal: 18,
+        shadowColor: '#2563EB',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 4,
+        position: 'relative',
+    },
+    accentBar: {
+        width: 5,
+        height: '80%',
+        backgroundColor: LIGHT_COLORS.primary,
+        borderRadius: 4,
+        marginRight: 16,
+    },
+    headerContent: {
+        flex: 1,
+    },
+    greeting: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 2,
+    },
+    subtitle: {
+        fontSize: 15,
+        color: '#6B7280',
+        marginTop: 2,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 12,
+    },
+    createProfileFab: {
+        backgroundColor: LIGHT_COLORS.primary,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#2563EB',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.16,
+        shadowRadius: 8,
+        elevation: 3,
     },
 });

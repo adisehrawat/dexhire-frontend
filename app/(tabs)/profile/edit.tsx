@@ -29,12 +29,16 @@ export default function ProfileEditPage() {
         try {
             if (profile?.userType === 'client') {
                 await deleteClient.mutateAsync({});
+                clearProfile();          // clear local cache
+                refetchProfile();        // re-check on-chain state
+                router.replace('/(tabs)/home');
             } else {
                 await deleteFreelancer.mutateAsync({});
+                clearProfile();          // clear local cache
+                refetchProfile();        // re-check on-chain state
+                router.replace('/(tabs)/home');
             }
-            clearProfile();          // clear local cache
-            refetchProfile();        // re-check on-chain state
-            router.replace('/(tabs)/home'); // stay on profile tab
+            // stay on profile tab
         } catch (e) {
             console.error(e);
         }
@@ -101,24 +105,24 @@ const styles = StyleSheet.create({
         paddingTop: 16,
         paddingBottom: 8,
         backgroundColor: '#F9FAFB',
-      },
-      backButton: {
+    },
+    backButton: {
         marginRight: 12,
         padding: 4,
         borderRadius: 8,
-      },
-      title: {
+    },
+    title: {
         fontSize: 20,
         fontWeight: '600',
         color: '#111827',
-      },
-      container: {
+    },
+    container: {
         flex: 1,
         backgroundColor: '#F9FAFB',
-      },
-      scrollView: {
+    },
+    scrollView: {
         padding: 16,
-      },
+    },
 });
 
 // const styles = StyleSheet.create({

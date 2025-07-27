@@ -26,3 +26,22 @@ export const Colors = {
     tint: tintColorDark,
   },
 }
+
+export const LIGHT_COLORS = {
+    background: '#F3F6FB', // lighter, modern background
+    surface: '#FFFFFF',
+    border: '#E5E7EB',
+    primary: '#2563EB', // blue (trustworthy)
+    secondary: '#059669', // green (success)
+    accent: '#F59E0B', // gold (highlight)
+    error: '#EF4444',
+    info: '#38BDF8',
+    success: '#22C55E',
+    warning: '#F59E42',
+    textPrimary: '#111827',
+    textSecondary: '#4B5563',
+    textMuted: '#9CA3AF',
+    cardShadow: 'rgba(37, 99, 235, 0.08)',
+    cardBorder: '#E0E7EF',
+    buttonShadow: 'rgba(37, 99, 235, 0.12)',
+  } as const;

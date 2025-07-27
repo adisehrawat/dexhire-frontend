@@ -135,13 +135,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Project</Text>
           <TouchableOpacity onPress={() => {}}>
-            <Text style={styles.saveText}>Step {currentStep}/3</Text>
+            <Text style={styles.saveText}>Step {currentStep}/2</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(currentStep / 3) * 100}%` }]} />
+            <View style={[styles.progressFill, { width: `${(currentStep / 2) * 100}%` }]} />
           </View>
         </View>
 

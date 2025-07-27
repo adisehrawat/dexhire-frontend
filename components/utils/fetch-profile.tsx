@@ -27,7 +27,13 @@ export async function fetchProfile(owner: PublicKey, provider: AnchorProvider) {
         return null;
     });
     console.log('[fetchProfile] clientAcc exists?', !!clientAcc);
-    if (clientAcc) return { ...clientAcc, userType: 'client' };
+    if (clientAcc) return {
+        ...clientAcc,
+        userType: 'client',
+        avatar: clientAcc.avatar,
+        joinedAt: clientAcc.joinedAt.toNumber(),
+        authority: clientAcc.authority,
+    };
 
     // 2. try freelancer
     const [freelancerPDA] = PublicKey.findProgramAddressSync(

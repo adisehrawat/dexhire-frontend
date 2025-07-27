@@ -1,12 +1,10 @@
-import { useProfile } from '@/contexts/ProfileContext';
+import { useCreateClientProfile, useCreateFreelancerProfile } from '@/components/data/dexhire-data-access';
 import { useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useCreateClientProfile, useCreateFreelancerProfile } from '@/components/data/dexhire-data-access';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { useWalletUi } from '@/components/solana/use-wallet-ui';
-import { router } from 'expo-router';
 
 interface ProfileCreateModalProps {
   visible: boolean;
@@ -14,18 +12,15 @@ interface ProfileCreateModalProps {
 }
 
 const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClose }) => {
-  const { setProfile } = useProfile();
   const queryClient = useQueryClient();
   const createClient = useCreateClientProfile();
   const createFreelancer = useCreateFreelancerProfile();
-  const { account } = useWalletUi();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [userType, setUserType] = useState<'freelancer' | 'client'>('client');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [profileJustCreated, setProfileJustCreated] = useState(false);
 
 //   const existingProfile = accounts?.data;
 //   const isLoadingAccounts = accounts?.isLoading;
@@ -34,7 +29,6 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
   useEffect(() => {
     if (!visible) {
       setSubmitting(false);
-      setProfileJustCreated(false);
       setName('');
       setEmail('');
       setError(null);
@@ -52,18 +46,21 @@ const ProfileCreateModal: React.FC<ProfileCreateModalProps> = ({ visible, onClos
 
     setSubmitting(true);
     try {
+      console.log('[ProfileCreateModal] Creating profile with userType:', userType);
       if (userType === 'freelancer') {
+        console.log('[ProfileCreateModal] Creating freelancer profile');
         await createFreelancer.mutateAsync({ name, email });
-        router.replace('/(tabs)/profile');
-        setSubmitting(false);
-      } else {
+      } else if (userType === 'client') {
+        console.log('[ProfileCreateModal] Creating client profile');
         await createClient.mutateAsync({ name, email });
-        router.replace('/(tabs)/profile');
-        setSubmitting(false);
       }
 
+      // Invalidate queries and update state after successful creation
       await queryClient.invalidateQueries();
-      setProfileJustCreated(true);
+      setSubmitting(false);
+
+      // Navigate to profile after everything is complete
+      router.replace('/(tabs)/profile');
     } catch (err: any) {
       setError(err?.message || 'Failed to create profile.');
       setSubmitting(false);

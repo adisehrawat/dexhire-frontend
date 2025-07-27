@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { PublicKey } from '@solana/web3.js';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import { useAuthorization } from '@/components/solana/use-authorization';
 import { useConnection } from '@/components/solana/solana-provider';
+import { useAuthorization } from '@/components/solana/use-authorization';
 import { fetchProfile } from '@/components/utils/fetch-profile';
+import { AnchorProvider } from '@coral-xyz/anchor';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export interface Profile {
   name: string;
@@ -51,7 +50,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         bio: acc.bio,
         country: acc.country,
         linkedin: acc.linkedin,
-        userType: acc.authority.equals(selectedAccount.publicKey) ? 'client' : 'freelancer'
+        userType: acc.userType as 'freelancer' | 'client'
       });
       console.log('[ProfileContext] profile fetched', acc);
     } else {
